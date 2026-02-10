@@ -1,0 +1,23 @@
+plugins {
+    id 'java'
+}
+
+group 'com.wasap'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'net.portswigger.burp.extender:burp-extender-api:2.3'
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+jar {
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
