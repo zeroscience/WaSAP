@@ -10,7 +10,11 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'net.portswigger.burp.extensions:montoya-api:2023.12.1'
+    // Montoya API only. Burp bundles it at runtime, so it is compileOnly and
+    // must not be packaged into the extension jar. No other dependencies are
+    // required: WaSAP is a pure Montoya scanner extension. 2026.7 provides the
+    // split PassiveScanCheck / ActiveScanCheck registration API.
+    compileOnly 'net.portswigger.burp.extensions:montoya-api:2026.7'
 }
 
 java {

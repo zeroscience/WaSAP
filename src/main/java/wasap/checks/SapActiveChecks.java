@@ -1,6 +1,7 @@
 package wasap.checks;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.Http;
 import burp.api.montoya.http.HttpService;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
@@ -19,13 +20,13 @@ public class SapActiveChecks {
         this.api = api;
     }
 
-    public List<AuditIssue> run(HttpService service) {
+    public List<AuditIssue> run(HttpService service, Http http) {
         List<AuditIssue> issues = new ArrayList<>();
-        addIfNotNull(issues, checkHypR3Xss(service));
-        addIfNotNull(issues, checkIcmadVulnerableVersion(service));
-        addIfNotNull(issues, checkVisualComposerMetadataUploader(service));
-        addIfNotNull(issues, checkCtcWebServiceWsdl(service));
-        addIfNotNull(issues, checkPublicInfoDisclosure(service));
+        addIfNotNull(issues, checkHypR3Xss(service, http));
+        addIfNotNull(issues, checkIcmadVulnerableVersion(service, http));
+        addIfNotNull(issues, checkVisualComposerMetadataUploader(service, http));
+        addIfNotNull(issues, checkCtcWebServiceWsdl(service, http));
+        addIfNotNull(issues, checkPublicInfoDisclosure(service, http));
         return issues;
     }
 
@@ -35,10 +36,10 @@ public class SapActiveChecks {
         }
     }
 
-    private AuditIssue checkHypR3Xss(HttpService service) {
+    private AuditIssue checkHypR3Xss(HttpService service, Http http) {
         String marker = "wasap" + Long.toHexString(System.nanoTime());
         String path = "/HYPARCHIV/HypR3Http.dll?zsl<script>" + marker + "</script>zsl=1";
-        HttpRequestResponse rr = send(service, path);
+        HttpRequestResponse rr = send(http, service, path);
         if (rr == null || rr.response() == null) {
             return null;
         }
@@ -62,8 +63,8 @@ public class SapActiveChecks {
         return null;
     }
 
-    private AuditIssue checkIcmadVulnerableVersion(HttpService service) {
-        HttpRequestResponse rr = send(service, "/sap/public/info");
+    private AuditIssue checkIcmadVulnerableVersion(HttpService service, Http http) {
+        HttpRequestResponse rr = send(http, service, "/sap/public/info");
         if (rr == null || rr.response() == null) {
             return null;
         }
@@ -101,8 +102,8 @@ public class SapActiveChecks {
         return null;
     }
 
-    private AuditIssue checkVisualComposerMetadataUploader(HttpService service) {
-        HttpRequestResponse rr = send(service, "/developmentserver/metadatauploader");
+    private AuditIssue checkVisualComposerMetadataUploader(HttpService service, Http http) {
+        HttpRequestResponse rr = send(http, service, "/developmentserver/metadatauploader");
         if (rr == null || rr.response() == null) {
             return null;
         }
@@ -128,8 +129,8 @@ public class SapActiveChecks {
         return null;
     }
 
-    private AuditIssue checkCtcWebServiceWsdl(HttpService service) {
-        HttpRequestResponse rr = send(service, "/CTCWebService/CTCWebServiceBean?wsdl");
+    private AuditIssue checkCtcWebServiceWsdl(HttpService service, Http http) {
+        HttpRequestResponse rr = send(http, service, "/CTCWebService/CTCWebServiceBean?wsdl");
         if (rr == null || rr.response() == null) {
             return null;
         }
@@ -154,8 +155,8 @@ public class SapActiveChecks {
         return null;
     }
 
-    private AuditIssue checkPublicInfoDisclosure(HttpService service) {
-        HttpRequestResponse rr = send(service, "/sap/public/info");
+    private AuditIssue checkPublicInfoDisclosure(HttpService service, Http http) {
+        HttpRequestResponse rr = send(http, service, "/sap/public/info");
         if (rr == null || rr.response() == null) {
             return null;
         }
@@ -170,11 +171,16 @@ public class SapActiveChecks {
         if (!looksLikeInfo) {
             return null;
         }
+
+        String extracted = extractSystemInfo(body);
+        String detail = "<p>The <code>/sap/public/info</code> service returned SAP system metadata without " +
+                "authentication. This information substantially lowers the effort required for targeted " +
+                "exploitation (mapping the host to known SAP Security Notes, database attacks, and RFC abuse).</p>"
+                + extracted;
+
         return AuditIssue.auditIssue(
                 "SAP: Unauthenticated System Information Disclosure (/sap/public/info)",
-                "<p>The <code>/sap/public/info</code> service returned SAP system metadata without authentication. " +
-                        "Typical fields disclosed include SID, kernel release, database host, and instance name. " +
-                        "This information substantially lowers the effort required for targeted exploitation.</p>",
+                detail,
                 "Disable the <code>/sap/public/info</code> service via transaction SICF or restrict it to internal " +
                         "networks at the Web Dispatcher.",
                 rr.request().url(),
@@ -187,13 +193,58 @@ public class SapActiveChecks {
                 rr);
     }
 
-    private HttpRequestResponse send(HttpService svc, String path) {
+    // Pull the interesting fields out of the /sap/public/info XML (RFC_SYSTEM_INFO
+    // structure) so the reported issue shows exactly what the host disclosed.
+    private String extractSystemInfo(String body) {
+        String[][] fields = {
+                {"RFCSYSID", "System ID (SID)"},
+                {"RFCDBSYS", "Database system"},
+                {"RFCDBHOST", "Database host"},
+                {"RFCSAPRL", "SAP kernel release"},
+                {"RFCKERNRL", "Kernel patch level"},
+                {"RFCOPSYS", "Operating system"},
+                {"RFCHOST", "Application host"},
+                {"RFCIPADDR", "IP address"},
+                {"RFCMACH", "Machine ID"}
+        };
+        StringBuilder sb = new StringBuilder();
+        for (String[] f : fields) {
+            String value = tagValue(body, f[0]);
+            if (value != null && !value.isEmpty()) {
+                sb.append("<li><b>").append(f[1]).append(":</b> <code>")
+                        .append(escape(value)).append("</code></li>");
+            }
+        }
+        if (sb.length() == 0) {
+            return "";
+        }
+        return "<p>Fields disclosed by this host:</p><ul>" + sb + "</ul>";
+    }
+
+    // Returns the text between <TAG>...</TAG> (case-insensitive), or null.
+    private static String tagValue(String body, String tag) {
+        String lower = body.toLowerCase();
+        String open = "<" + tag.toLowerCase() + ">";
+        String close = "</" + tag.toLowerCase() + ">";
+        int start = lower.indexOf(open);
+        if (start < 0) {
+            return null;
+        }
+        start += open.length();
+        int end = lower.indexOf(close, start);
+        if (end < 0 || end - start > 128) {
+            return null;
+        }
+        return body.substring(start, end).trim();
+    }
+
+    private HttpRequestResponse send(Http http, HttpService svc, String path) {
         try {
             String proto = svc.secure() ? "https" : "http";
             int port = svc.port();
             boolean defaultPort = (svc.secure() && port == 443) || (!svc.secure() && port == 80);
             String url = proto + "://" + svc.host() + (defaultPort ? "" : ":" + port) + path;
-            return api.http().sendRequest(HttpRequest.httpRequestFromUrl(url));
+            return http.sendRequest(HttpRequest.httpRequestFromUrl(url));
         } catch (Exception e) {
             api.logging().logToError("[WaSAP] send error: " + e.getMessage());
             return null;

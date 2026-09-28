@@ -1,0 +1,23 @@
+# Build output
+build/
+bin/
+out/
+
+# Gradle
+.gradle/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Packaged extension artifacts (keep the Gradle wrapper jar)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar

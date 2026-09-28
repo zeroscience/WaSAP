@@ -2,6 +2,7 @@ package wasap.checks;
 
 import burp.api.montoya.MontoyaApi;
 import burp.api.montoya.core.ByteArray;
+import burp.api.montoya.http.Http;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.scanner.audit.insertionpoint.AuditInsertionPoint;
@@ -36,7 +37,7 @@ public class SapInsertionPointChecks {
         this.api = api;
     }
 
-    public List<AuditIssue> run(HttpRequestResponse base, AuditInsertionPoint insertionPoint) {
+    public List<AuditIssue> run(HttpRequestResponse base, AuditInsertionPoint insertionPoint, Http http) {
         List<AuditIssue> issues = new ArrayList<>();
 
         String rawName = insertionPoint.name();
@@ -67,7 +68,7 @@ public class SapInsertionPointChecks {
         }
 
         HttpRequest probe = insertionPoint.buildHttpRequestWithPayload(ByteArray.byteArray(payload));
-        HttpRequestResponse rr = api.http().sendRequest(probe);
+        HttpRequestResponse rr = http.sendRequest(probe);
         if (rr == null || rr.response() == null) {
             return issues;
         }
