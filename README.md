@@ -54,19 +54,21 @@ parameter names and targets SAP error disclosure.
 
 ## Design
 
-WaSAP implements a single `ScanCheck` with three layers of logic:
+WaSAP registers three scan checks with Burp Scanner:
 
-- **Passive checks** - run on every audited response. Detect SAP fingerprints,
-  NetWeaver server header disclosure, SAP-specific response headers, SAP
-  session cookies without `HttpOnly` / `Secure` flags, and ABAP/J2EE verbose
-  error pages.
-- **Per-host active checks** - run exactly once per host (tracked via a
-  `ConcurrentHashMap`, regardless of how many insertion points the host
-  exposes). Enumerates the endpoint catalog and runs deeper CVE-specific
-  probes. A random baseline probe is issued first so that custom 404 / SPA
-  catch-all responses can be filtered out.
-- **Per-insertion-point active checks** - run on every insertion point but
-  only act on SAP-specific parameter names.
+- **`SapPassiveScanCheck`** (`PassiveScanCheck`, `PER_REQUEST`) - runs on every
+  audited response. Detects SAP fingerprints, NetWeaver server header
+  disclosure, SAP-specific response headers, SAP session cookies without
+  `HttpOnly` / `Secure` flags, and ABAP/J2EE verbose error pages.
+- **`SapHostScanCheck`** (`ActiveScanCheck`, `PER_HOST`) - Burp runs it exactly
+  once per host, regardless of how many insertion points the host exposes.
+  Enumerates the endpoint catalog and runs deeper CVE-specific probes. A random
+  baseline probe is issued first so that custom 404 / SPA catch-all responses
+  can be filtered out.
+- **`SapInsertionPointScanCheck`** (`ActiveScanCheck`, `PER_INSERTION_POINT`) -
+  runs on every insertion point but only acts on SAP-specific parameter names.
+  Active checks issue their requests through the scan-task `Http` object so Burp
+  links, scopes and throttles them with the audit.
 
 All findings are raised via `AuditIssue.auditIssue(...)` with severity,
 confidence, background, remediation background, and the request/response that
@@ -76,7 +78,7 @@ produced them.
 
 ## Installation
 
-1. Download `WaSAP.jar` from the [releases page](https://github.com/portswigger/wasap/releases)
+1. Download `WaSAP.jar` from the [releases page](https://github.com/zeroscience/WaSAP/releases)
    or build it from source (see below).
 2. Open **Burp Suite** -> **Extensions** -> **Installed** -> **Add**.
 3. Extension type: **Java**, select `WaSAP.jar`.
@@ -84,7 +86,7 @@ produced them.
 
    ```
    [WaSAP] Loaded SAP security scan checks.
-   [WaSAP] Passive : SAP tech fingerprint, cookie flags, error disclosure.
+   [WaSAP] Passive (per request) : SAP tech fingerprint, cookie flags, error disclosure.
    [WaSAP] Active (per host) : SAP default endpoints, management interfaces, CVE-tied paths.
    [WaSAP] Active (per insertion point) : SAP-specific parameter checks.
    ```
@@ -141,8 +143,9 @@ curl -sSLo montoya-api.jar \
 mkdir -p build/classes
 javac -cp montoya-api.jar -d build/classes $(find src/main/java -name "*.java")
 
-# 3. Package
-jar cf WaSAP.jar -C build/classes .
+# 3. Package (the resources dir carries the Montoya service manifest that
+#    tells Burp which class to load - the jar will not load without it)
+jar cf WaSAP.jar -C build/classes . -C src/main/resources .
 ```
 
 ---
