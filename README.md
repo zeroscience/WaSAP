@@ -118,13 +118,13 @@ Typical workflow:
 
 ## Build from Source
 
-Requirements: JDK 17+, Gradle (or use the wrapper if present).
+Requirements: JDK 17+ (the bundled Gradle wrapper handles Gradle).
 
 ```bash
 git clone https://github.com/zeroscience/wasap.git
 cd wasap
 ./gradlew jar
-# -> build/libs/WaSAP-2.0.0.jar
+# -> build/libs/WaSAP-2.5.2.jar
 ```
 
 The build declares Montoya API as `compileOnly` (Burp already bundles it, so
@@ -149,77 +149,8 @@ jar cf WaSAP.jar -C build/classes .
 
 ## Changelog
 
-### 2.5.2 - Build fixes, split scan checks, catalog expansion
-- **Split the single combined `ScanCheck` into three purpose-built checks**
-  using the current Montoya scan-check API (montoya-api 2026.7): a
-  `PassiveScanCheck` (`SapPassiveScanCheck`, registered `PER_REQUEST`), a host
-  `ActiveScanCheck` (`SapHostScanCheck`, registered `PER_HOST` so the endpoint
-  catalog and CVE probes run exactly once per host), and an insertion-point
-  `ActiveScanCheck` (`SapInsertionPointScanCheck`, registered
-  `PER_INSERTION_POINT`). This replaces the deprecated
-  `registerScanCheck(ScanCheck)` path; per-host scheduling is now handled by
-  Burp rather than a manual host-tracking set. Active checks issue their
-  requests through the scan-task `Http` object so Burp links, scopes and
-  throttles them correctly.
-- **Added the missing `SapEndpointCatalog`.** `SapHostChecks` referenced
-  `SapEndpointCatalog.ENDPOINTS` but the class was never committed, so the
-  project did not compile. It now ships a data-driven catalog of 50+ SAP
-  endpoints grouped by category (ICF, BSP, Web Dynpro, Fiori/Gateway OData,
-  NetWeaver Java management, Enterprise Portal, HANA XS, BW/BI, CVE-tied).
-- **Added the Montoya extension service manifest**
-  (`META-INF/services/burp.api.montoya.BurpExtension`) so Burp can load the
-  extension.
-- **Removed leftover legacy Extender API code.** The 2.5.1 notes stated the
-  legacy UI panel, context menu, `ScanController`, and generic fuzzer were
-  removed, but the files were still present and pulled in the legacy
-  `burp-extender-api`. They are now deleted; the build declares Montoya only.
-- **Enriched `/sap/public/info` disclosure.** The check now parses the
-  `RFC_SYSTEM_INFO` response and reports the exact fields disclosed (SID,
-  database system and host, kernel release, OS, host, IP).
-- **Added SAP Web Dispatcher admin console detection.**
-
-### 2.5.1 - Montoya rewrite
-- **Full migration from the legacy Extender API to the Montoya API.** The
-  extension now registers a proper `ScanCheck` with Burp Scanner instead of
-  running ad-hoc probes from a context-menu action.
-- **Findings raised as `AuditIssue`** with severity, confidence, background,
-  remediation background and evidence request/response. Issues appear in the
-  Burp Dashboard and Site map alongside Burp's own checks.
-- **Per-host vs per-insertion-point scheduling.** The endpoint catalog is
-  probed exactly once per host (tracked via `ConcurrentHashMap`); parameter
-  checks run per insertion point but only on SAP-specific parameter names.
-- **Removed the legacy generic Fuzzer** (XSS / SQLi / traversal payloads) that
-  duplicated Burp Scanner's built-in checks.
-- **Removed the custom UI panel, context menu, ScanController, and CSV
-  export.** Output is delivered through Burp Scanner.
-- **Data-driven endpoint catalog** (`SapEndpointCatalog`) covering ABAP ICF,
-  BSP, Web Dynpro admin apps, Fiori/Gateway OData, NetWeaver Java management
-  interfaces, Enterprise Portal, HANA XS, BW/BI, and CVE-tied paths. Legacy
-  endpoints such as FormToRfc and WebRFC are catalogued as fingerprints without
-  asserting a specific CVE.
-- **Active CVE checks:** Visual Composer Metadata Uploader (CVE-2025-31324),
-  ICMAD version detection (CVE-2022-22536), RECON WSDL content verification
-  (CVE-2020-6287), and `/sap/public/info` unauthenticated system-info
-  disclosure. The catalog additionally tags LMXML (CVE-2020-6308) and the
-  EJB / JMX Invoker servlets (CVE-2010-5326).
-- **Baseline-aware probing.** A random `/wasap-probe-<nonce>` request is
-  issued first to learn a host's custom 404 / catch-all behaviour; probes
-  whose status and length match the baseline are suppressed to reduce false
-  positives on SPA hosts.
-- **SAP-scoped passive checks.** Cookie security flag checks now only fire on
-  SAP cookies (`MYSAPSSO2`, `SAP_SESSIONID_*`, `PortalAlias`, `saplb_*`,
-  `sap-login-XSRF`) rather than every cookie; fingerprint checks only fire on
-  SAP-specific headers.
-- **Reflected XSS probe uses a random marker** instead of a static
-  `<script>alert(1)</script>` payload, improving reliability and reducing
-  collisions with pages that happen to contain the static string.
-- **Build system:** switched to Java 17, `compileOnly` Montoya dependency.
-
-### 1.x - legacy (pre-Montoya)
-- Context-menu driven enumeration of ~50 SAP endpoints.
-- Generic XSS / SQLi / traversal fuzzer.
-- Custom Swing UI panel with CSV export.
-- Built on the legacy `burp-extender-api` 2.3.
+See [CHANGELOG.md](CHANGELOG.md) for the full version history. The current
+release is **2.5.2**.
 
 ---
 
