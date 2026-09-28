@@ -1,6 +1,7 @@
 package wasap.checks;
 
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.Http;
 import burp.api.montoya.http.HttpService;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
@@ -20,15 +21,17 @@ public class SapHostChecks {
         this.activeChecks = new SapActiveChecks(api);
     }
 
-    public List<AuditIssue> runAll(HttpRequestResponse base) {
+    // Requests are issued through the scan-task's Http object so Burp links them
+    // to the current audit (throttling, scope, logging).
+    public List<AuditIssue> runAll(HttpRequestResponse base, Http http) {
         List<AuditIssue> issues = new ArrayList<>();
         HttpService service = base.httpService();
 
-        Baseline baseline = computeBaseline(service);
+        Baseline baseline = computeBaseline(service, http);
 
         for (SapEndpoint endpoint : SapEndpointCatalog.ENDPOINTS) {
             try {
-                AuditIssue issue = probeEndpoint(service, endpoint, baseline);
+                AuditIssue issue = probeEndpoint(service, endpoint, baseline, http);
                 if (issue != null) {
                     issues.add(issue);
                 }
@@ -37,14 +40,14 @@ public class SapHostChecks {
             }
         }
 
-        issues.addAll(activeChecks.run(service));
+        issues.addAll(activeChecks.run(service, http));
         return issues;
     }
 
-    private Baseline computeBaseline(HttpService service) {
+    private Baseline computeBaseline(HttpService service, Http http) {
         try {
             String random = "/wasap-probe-" + Long.toHexString(System.nanoTime());
-            HttpRequestResponse rr = api.http().sendRequest(HttpRequest.httpRequestFromUrl(buildUrl(service, random)));
+            HttpRequestResponse rr = http.sendRequest(HttpRequest.httpRequestFromUrl(buildUrl(service, random)));
             if (rr != null && rr.response() != null) {
                 return new Baseline(rr.response().statusCode(), rr.response().body().length());
             }
@@ -53,9 +56,9 @@ public class SapHostChecks {
         return new Baseline(-1, -1);
     }
 
-    private AuditIssue probeEndpoint(HttpService service, SapEndpoint endpoint, Baseline baseline) {
+    private AuditIssue probeEndpoint(HttpService service, SapEndpoint endpoint, Baseline baseline, Http http) {
         HttpRequest req = HttpRequest.httpRequestFromUrl(buildUrl(service, endpoint.path));
-        HttpRequestResponse rr = api.http().sendRequest(req);
+        HttpRequestResponse rr = http.sendRequest(req);
         if (rr == null || rr.response() == null) {
             return null;
         }

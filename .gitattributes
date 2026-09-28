@@ -1,0 +1,12 @@
+# Normalize line endings across platforms
+* text=auto
+
+# Shell scripts must stay LF so they run on Unix
+gradlew text eol=lf
+*.sh text eol=lf
+
+# Windows scripts stay CRLF
+*.bat text eol=crlf
+
+# Binary
+*.jar binary

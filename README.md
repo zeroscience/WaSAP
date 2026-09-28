@@ -1,4 +1,4 @@
-# WaSAP — Web Application SAP Scanner
+# WaSAP - Web Application SAP Scanner
 
 Burp Suite extension that adds SAP-specific scan checks to Burp Scanner. Built
 on the Montoya API, WaSAP registers passive and active checks that detect
@@ -11,27 +11,28 @@ in the Dashboard alongside Burp's own checks.
 ## Features
 
 ### CVE-tied checks
-- **CVE-2025-31324** — NetWeaver Visual Composer Metadata Uploader (unauth RCE)
-- **CVE-2022-22536** — ICMAD (ICM / Web Dispatcher HTTP smuggling, version-based)
-- **CVE-2020-6287** — RECON (LM Configuration Wizard, CTCWebService)
-- **CVE-2020-6308** — LMXML
-- **CVE-2021-33690** — FormToRfc
-- **CVE-2011-1516** — WebRFC
-- **CVE-2010-5326** — EJB / JMX Invoker Servlets
+Active content-verifying probes:
+- **CVE-2025-31324** - NetWeaver Visual Composer Metadata Uploader (unauth RCE)
+- **CVE-2022-22536** - ICMAD (ICM / Web Dispatcher HTTP smuggling, version-based)
+- **CVE-2020-6287** - RECON (LM Configuration Wizard, CTCWebService)
 
-### Endpoint catalog (70+ entries)
-- **ABAP ICF** — ping, public/info, soap/wsdl, soap/rfc, echo, error, srt/wsil,
-  FormToRfc, webrfc, ...
-- **BSP applications** — IT00 demo, Neptune, system login
-- **Web Dynpro (ABAP)** — admin, configure_application, configure_component,
+CVE-tagged catalog endpoints (reachability fingerprint, confirm the component
+version before acting):
+- **CVE-2020-6308** - LMXML
+- **CVE-2010-5326** - EJB / JMX Invoker Servlets
+
+### Endpoint catalog (50+ entries)
+- **ABAP ICF** - ping, public/info, soap/wsdl, soap/rfc, echo, error, srt/wsil,
+  FormToRfc, webrfc, WebGUI
+- **BSP applications** - IT00 demo, Neptune, system login
+- **Web Dynpro (ABAP)** - configure_application, configure_component,
   wdr_test_apb, wd_sise_main_app, wd_sise_user_admin, visual_composer, wdvd
-- **Fiori & Gateway OData** — Fiori Launchpad, catalog service, managing service
-- **NetWeaver Java management** — NWA, useradmin, wsnavigator, ejbexplorer,
-  sr_central, SLD, ITSAM/Solution Manager, RTMF
-- **Enterprise Portal** — irj/portal, anonymous registration entry point
-- **HANA XS** — admin, IDE editor / catalog / security, lifecycle management,
-  Web IDE, formLogin
-- **BW / BI** — portal integration
+- **Fiori & Gateway OData** - Fiori Launchpad, catalog service, managing service
+- **NetWeaver Java management** - NWA, useradmin, wsnavigator, ejbexplorer,
+  sr_central, SLD, RTMF, Web Dispatcher admin console
+- **Enterprise Portal** - irj/portal, anonymous registration entry point
+- **HANA XS** - admin, IDE editor / catalog / security, formLogin
+- **BW / BI** - portal integration
 
 ### Passive SAP-specific issues
 - SAP UI5 framework fingerprint (with version extraction)
@@ -39,14 +40,14 @@ in the Dashboard alongside Burp's own checks.
 - SAP proprietary response headers (`x-sap-page-generation`, `sap-server`,
   `sap-perf-fesrec`, `x-sap-login-page`, `sap-usercontext`)
 - SAP session cookie flag checks (`MYSAPSSO2`, `SAP_SESSIONID_*`, `PortalAlias`,
-  `saplb_*`, `sap-login-XSRF`) — only SAP cookies, not generic
+  `saplb_*`, `sap-login-XSRF`) - only SAP cookies, not generic
 - ABAP / J2EE verbose error disclosure
 
 ### Per-insertion-point active checks
 SAP-specific parameter checks on `sap-client`, `sap-language`, `sap-user`,
 `sap-syscmd`, `sap-sessioncmd`, `sap-contextid`, `sap-locale`,
 `sap-login-locale`, `sap-accessibility`, `sap-ssc`. Designed not to duplicate
-Burp Scanner's built-in XSS / SQLi / traversal fuzzing — it runs only on SAP
+Burp Scanner's built-in XSS / SQLi / traversal fuzzing - it runs only on SAP
 parameter names and targets SAP error disclosure.
 
 ---
@@ -55,16 +56,16 @@ parameter names and targets SAP error disclosure.
 
 WaSAP implements a single `ScanCheck` with three layers of logic:
 
-- **Passive checks** — run on every audited response. Detect SAP fingerprints,
+- **Passive checks** - run on every audited response. Detect SAP fingerprints,
   NetWeaver server header disclosure, SAP-specific response headers, SAP
   session cookies without `HttpOnly` / `Secure` flags, and ABAP/J2EE verbose
   error pages.
-- **Per-host active checks** — run exactly once per host (tracked via a
+- **Per-host active checks** - run exactly once per host (tracked via a
   `ConcurrentHashMap`, regardless of how many insertion points the host
   exposes). Enumerates the endpoint catalog and runs deeper CVE-specific
   probes. A random baseline probe is issued first so that custom 404 / SPA
   catch-all responses can be filtered out.
-- **Per-insertion-point active checks** — run on every insertion point but
+- **Per-insertion-point active checks** - run on every insertion point but
   only act on SAP-specific parameter names.
 
 All findings are raised via `AuditIssue.auditIssue(...)` with severity,
@@ -77,9 +78,9 @@ produced them.
 
 1. Download `WaSAP.jar` from the [releases page](https://github.com/portswigger/wasap/releases)
    or build it from source (see below).
-2. Open **Burp Suite** → **Extensions** → **Installed** → **Add**.
+2. Open **Burp Suite** -> **Extensions** -> **Installed** -> **Add**.
 3. Extension type: **Java**, select `WaSAP.jar`.
-4. Check the **Output** tab — you should see:
+4. Check the **Output** tab - you should see:
 
    ```
    [WaSAP] Loaded SAP security scan checks.
@@ -94,21 +95,21 @@ Burp bundles the Montoya API, so no additional dependencies are required.
 
 ## Usage
 
-WaSAP does not add a tab or context menu — it registers scan checks directly
+WaSAP does not add a tab or context menu - it registers scan checks directly
 with Burp Scanner. Run scans as you normally would and SAP findings appear
 alongside Burp's own issues.
 
-**To test:** right-click a request → **Scan** → **Audit** (active scan
+**To test:** right-click a request -> **Scan** -> **Audit** (active scan
 triggers the per-host endpoint enumeration + CVE checks + per-insertion-point
 SAP param checks; passive scans trigger fingerprint / cookie / error-disclosure
-issues). Findings appear in **Dashboard → Issues** and
-**Target → Site map → Issues**, prefixed with `SAP:`.
+issues). Findings appear in **Dashboard -> Issues** and
+**Target -> Site map -> Issues**, prefixed with `SAP:`.
 
 Typical workflow:
 1. Browse the target SAP application through the Burp proxy.
-2. In **Target → Site map**, right-click the SAP host → **Scan** → **Audit
+2. In **Target -> Site map**, right-click the SAP host -> **Scan** -> **Audit
    selected items**.
-3. Watch the **Dashboard** for new `SAP: …` findings as the host is enumerated
+3. Watch the **Dashboard** for new `SAP: ...` findings as the host is enumerated
    and insertion points are probed.
 4. Passive checks also fire automatically as new responses flow through the
    proxy if passive scanning is enabled.
@@ -134,7 +135,7 @@ it must not be packaged into the extension jar).
 ```bash
 # 1. Fetch the Montoya API jar from Maven Central
 curl -sSLo montoya-api.jar \
-  https://repo1.maven.org/maven2/net/portswigger/burp/extensions/montoya-api/2023.12.1/montoya-api-2023.12.1.jar
+  https://repo1.maven.org/maven2/net/portswigger/burp/extensions/montoya-api/2026.7/montoya-api-2026.7.jar
 
 # 2. Compile
 mkdir -p build/classes
@@ -148,7 +149,36 @@ jar cf WaSAP.jar -C build/classes .
 
 ## Changelog
 
-### 2.5.1 — Montoya rewrite
+### 2.5.2 - Build fixes, split scan checks, catalog expansion
+- **Split the single combined `ScanCheck` into three purpose-built checks**
+  using the current Montoya scan-check API (montoya-api 2026.7): a
+  `PassiveScanCheck` (`SapPassiveScanCheck`, registered `PER_REQUEST`), a host
+  `ActiveScanCheck` (`SapHostScanCheck`, registered `PER_HOST` so the endpoint
+  catalog and CVE probes run exactly once per host), and an insertion-point
+  `ActiveScanCheck` (`SapInsertionPointScanCheck`, registered
+  `PER_INSERTION_POINT`). This replaces the deprecated
+  `registerScanCheck(ScanCheck)` path; per-host scheduling is now handled by
+  Burp rather than a manual host-tracking set. Active checks issue their
+  requests through the scan-task `Http` object so Burp links, scopes and
+  throttles them correctly.
+- **Added the missing `SapEndpointCatalog`.** `SapHostChecks` referenced
+  `SapEndpointCatalog.ENDPOINTS` but the class was never committed, so the
+  project did not compile. It now ships a data-driven catalog of 50+ SAP
+  endpoints grouped by category (ICF, BSP, Web Dynpro, Fiori/Gateway OData,
+  NetWeaver Java management, Enterprise Portal, HANA XS, BW/BI, CVE-tied).
+- **Added the Montoya extension service manifest**
+  (`META-INF/services/burp.api.montoya.BurpExtension`) so Burp can load the
+  extension.
+- **Removed leftover legacy Extender API code.** The 2.5.1 notes stated the
+  legacy UI panel, context menu, `ScanController`, and generic fuzzer were
+  removed, but the files were still present and pulled in the legacy
+  `burp-extender-api`. They are now deleted; the build declares Montoya only.
+- **Enriched `/sap/public/info` disclosure.** The check now parses the
+  `RFC_SYSTEM_INFO` response and reports the exact fields disclosed (SID,
+  database system and host, kernel release, OS, host, IP).
+- **Added SAP Web Dispatcher admin console detection.**
+
+### 2.5.1 - Montoya rewrite
 - **Full migration from the legacy Extender API to the Montoya API.** The
   extension now registers a proper `ScanCheck` with Burp Scanner instead of
   running ad-hoc probes from a context-menu action.
@@ -162,14 +192,16 @@ jar cf WaSAP.jar -C build/classes .
   duplicated Burp Scanner's built-in checks.
 - **Removed the custom UI panel, context menu, ScanController, and CSV
   export.** Output is delivered through Burp Scanner.
-- **Data-driven endpoint catalog** (`SapEndpointCatalog`, 70+ entries) covering
-  ABAP ICF, BSP, Web Dynpro admin apps, Fiori/Gateway OData, NetWeaver Java
-  management interfaces, Enterprise Portal, HANA XS, BW/BI, and CVE-tied paths.
-- **New CVE checks:** Visual Composer Metadata Uploader (CVE-2025-31324),
+- **Data-driven endpoint catalog** (`SapEndpointCatalog`) covering ABAP ICF,
+  BSP, Web Dynpro admin apps, Fiori/Gateway OData, NetWeaver Java management
+  interfaces, Enterprise Portal, HANA XS, BW/BI, and CVE-tied paths. Legacy
+  endpoints such as FormToRfc and WebRFC are catalogued as fingerprints without
+  asserting a specific CVE.
+- **Active CVE checks:** Visual Composer Metadata Uploader (CVE-2025-31324),
   ICMAD version detection (CVE-2022-22536), RECON WSDL content verification
-  (CVE-2020-6287), `/sap/public/info` unauthenticated system-info disclosure,
-  LMXML (CVE-2020-6308), FormToRfc (CVE-2021-33690), WebRFC (CVE-2011-1516),
-  Invoker servlets (CVE-2010-5326).
+  (CVE-2020-6287), and `/sap/public/info` unauthenticated system-info
+  disclosure. The catalog additionally tags LMXML (CVE-2020-6308) and the
+  EJB / JMX Invoker servlets (CVE-2010-5326).
 - **Baseline-aware probing.** A random `/wasap-probe-<nonce>` request is
   issued first to learn a host's custom 404 / catch-all behaviour; probes
   whose status and length match the baseline are suppressed to reduce false
@@ -183,7 +215,7 @@ jar cf WaSAP.jar -C build/classes .
   collisions with pages that happen to contain the static string.
 - **Build system:** switched to Java 17, `compileOnly` Montoya dependency.
 
-### 1.x — legacy (pre-Montoya)
+### 1.x - legacy (pre-Montoya)
 - Context-menu driven enumeration of ~50 SAP endpoints.
 - Generic XSS / SQLi / traversal fuzzer.
 - Custom Swing UI panel with CSV export.
@@ -195,15 +227,21 @@ jar cf WaSAP.jar -C build/classes .
 
 ```
 src/main/java/wasap/
-├── WaSAPExtension.java                   # BurpExtension entry point
-└── checks/
-    ├── SapScanCheck.java                 # Unified ScanCheck (per-host tracking + dispatch)
-    ├── SapEndpoint.java                  # Catalog entry model
-    ├── SapEndpointCatalog.java           # 70+ SAP endpoints with severity / CVE metadata
-    ├── SapHostChecks.java                # Per-host probe loop + baseline 404 detection
-    ├── SapActiveChecks.java              # CVE-specific active probes
-    ├── SapPassiveChecks.java             # Passive fingerprint / cookie / error checks
-    └── SapInsertionPointChecks.java      # Per-insertion-point SAP parameter checks
+|-- WaSAPExtension.java                   # BurpExtension entry point, registers the 3 checks
+`-- checks/
+    |-- SapPassiveScanCheck.java          # PassiveScanCheck  (PER_REQUEST)
+    |-- SapHostScanCheck.java             # ActiveScanCheck   (PER_HOST)
+    |-- SapInsertionPointScanCheck.java   # ActiveScanCheck   (PER_INSERTION_POINT)
+    |-- SapIssueConsolidation.java        # Shared issue de-duplication
+    |-- SapEndpoint.java                  # Catalog entry model
+    |-- SapEndpointCatalog.java           # 50+ SAP endpoints with severity / CVE metadata
+    |-- SapHostChecks.java                # Per-host probe loop + baseline 404 detection
+    |-- SapActiveChecks.java              # CVE-specific active probes
+    |-- SapPassiveChecks.java             # Passive fingerprint / cookie / error checks
+    `-- SapInsertionPointChecks.java      # Per-insertion-point SAP parameter checks
+
+src/main/resources/
+`-- META-INF/services/burp.api.montoya.BurpExtension   # Montoya service manifest
 ```
 
 ---
