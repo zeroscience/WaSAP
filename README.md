@@ -124,7 +124,7 @@ Requirements: JDK 17+ (the bundled Gradle wrapper handles Gradle).
 git clone https://github.com/zeroscience/wasap.git
 cd wasap
 ./gradlew jar
-# -> build/libs/WaSAP-2.5.2.jar
+# -> build/libs/WaSAP-2.5.1.jar
 ```
 
 The build declares Montoya API as `compileOnly` (Burp already bundles it, so
@@ -150,7 +150,7 @@ jar cf WaSAP.jar -C build/classes .
 ## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history. The current
-release is **2.5.2**.
+release is **2.5.1**.
 
 ---
 

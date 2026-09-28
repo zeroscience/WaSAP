@@ -3,7 +3,7 @@ plugins {
 }
 
 group 'com.wasap'
-version '2.5.2'
+version '2.5.1'
 
 repositories {
     mavenCentral()
