@@ -40,7 +40,7 @@ version before acting):
 - SAP proprietary response headers (`x-sap-page-generation`, `sap-server`,
   `sap-perf-fesrec`, `x-sap-login-page`, `sap-usercontext`)
 - SAP session cookie flag checks (`MYSAPSSO2`, `SAP_SESSIONID_*`, `PortalAlias`,
-  `saplb_*`, `sap-login-XSRF`) - only SAP cookies, not generic
+  `saplb_*`, `sap-usercontext`, `sap-login-XSRF`) - only SAP cookies, not generic
 - ABAP / J2EE verbose error disclosure
 
 ### Per-insertion-point active checks
