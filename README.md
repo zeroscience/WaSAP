@@ -12,7 +12,8 @@ in the Dashboard alongside Burp's own checks.
 
 ### CVE-tied checks
 Active content-verifying probes:
-- **CVE-2025-31324** - NetWeaver Visual Composer Metadata Uploader (unauth RCE)
+- **CVE-2025-31324** - NetWeaver Visual Composer Metadata Uploader (unauth RCE;
+  the finding also flags the chained deserialization flaw CVE-2025-42999)
 - **CVE-2022-22536** - ICMAD (ICM / Web Dispatcher HTTP smuggling, version-based)
 - **CVE-2020-6287** - RECON (LM Configuration Wizard, CTCWebService)
 - **CVE-2020-6207** - Solution Manager EEM missing authentication (WSDL-verified)
@@ -30,7 +31,8 @@ version before acting):
 - **BSP applications** - IT00 demo, Neptune, system login
 - **Web Dynpro (ABAP)** - configure_application, configure_component,
   wdr_test_apb, wd_sise_main_app, wd_sise_user_admin, visual_composer, wdvd
-- **Fiori & Gateway OData** - Fiori Launchpad, catalog service, managing service
+- **Fiori & Gateway OData** - Fiori Launchpad, catalog service, managing service,
+  start_up, Page Builder, Launchpad customizing (apb_lpd_cust)
 - **NetWeaver Java management** - NWA, useradmin, wsnavigator, ejbexplorer,
   sr_central, SLD, RTMF, Web Dispatcher admin console
 - **Enterprise Portal** - irj/portal, anonymous registration entry point

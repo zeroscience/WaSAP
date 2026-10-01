@@ -187,7 +187,9 @@ public class SapActiveChecks {
                 AuditIssueSeverity.HIGH,
                 confidence,
                 "<p>CVE-2025-31324 is a critical unauthenticated file-upload vulnerability in SAP NetWeaver " +
-                        "Visual Composer, actively exploited since April 2025.</p>",
+                        "Visual Composer, actively exploited since April 2025. The same " +
+                        "<code>metadatauploader</code> endpoint is also the vector for the chained insecure " +
+                        "deserialization flaw CVE-2025-42999, so apply the latest SAP Security Notes covering both.</p>",
                 "Patch immediately and review the filesystem for dropped JSP / WAR artefacts.",
                 AuditIssueSeverity.HIGH,
                 rr);

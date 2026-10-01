@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   reports the exact fields disclosed (SID, database system and host, kernel
   release, OS, application host, IP).
 - SAP Web Dispatcher admin console detection.
+- Additional catalog endpoints: Fiori Launchpad start_up and shell (flp), Page
+  Builder personalization OData, Launchpad customizing (apb_lpd_cust), and the
+  SOAP RFC runtime namespace.
+- The Visual Composer finding now also names the chained deserialization flaw
+  CVE-2025-42999 (same metadatauploader endpoint).
 - Baseline-aware probing: a random `/wasap-probe-<nonce>` request learns a
   host's custom 404 / catch-all behaviour, and probes whose status and length
   match the baseline are suppressed to reduce false positives.
