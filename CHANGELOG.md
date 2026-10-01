@@ -16,9 +16,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Active CVE checks: Visual Composer Metadata Uploader (CVE-2025-31324), ICMAD
   version detection (CVE-2022-22536), RECON WSDL content verification
   (CVE-2020-6287), Solution Manager EEM missing authentication (CVE-2020-6207,
-  WSDL content-verified), and `/sap/public/info` unauthenticated system-info
-  disclosure. The catalog additionally tags LMXML (CVE-2020-6308) and the
-  EJB / JMX Invoker servlets (CVE-2010-5326).
+  WSDL content-verified), AS Java Scheduler directory traversal (CVE-2017-12637,
+  confirmed by retrieving WEB-INF/web.xml), and `/sap/public/info`
+  unauthenticated system-info disclosure. The catalog additionally tags LMXML
+  (CVE-2020-6308) and the EJB / JMX Invoker servlets (CVE-2010-5326).
 - `/sap/public/info` disclosure parses the `RFC_SYSTEM_INFO` response and
   reports the exact fields disclosed (SID, database system and host, kernel
   release, OS, application host, IP).

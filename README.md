@@ -16,6 +16,8 @@ Active content-verifying probes:
 - **CVE-2022-22536** - ICMAD (ICM / Web Dispatcher HTTP smuggling, version-based)
 - **CVE-2020-6287** - RECON (LM Configuration Wizard, CTCWebService)
 - **CVE-2020-6207** - Solution Manager EEM missing authentication (WSDL-verified)
+- **CVE-2017-12637** - AS Java Scheduler directory traversal (confirmed by
+  retrieving `WEB-INF/web.xml`)
 
 CVE-tagged catalog endpoints (reachability fingerprint, confirm the component
 version before acting):
