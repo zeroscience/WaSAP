@@ -27,11 +27,18 @@ public class SapHostChecks {
         List<AuditIssue> issues = new ArrayList<>();
         HttpService service = base.httpService();
 
+        // Corroborate that this is actually an SAP host before raising endpoint
+        // findings. The passive side already saw the base response; combine that
+        // with a couple of targeted probes. On a non-SAP host this stays false
+        // and each endpoint must prove SAP on its own response, which suppresses
+        // false positives on unrelated applications.
+        boolean sapHost = SapActiveChecks.hasSapIndicators(base.response()) || looksLikeSapHost(service, http);
+
         Baseline baseline = computeBaseline(service, http);
 
         for (SapEndpoint endpoint : SapEndpointCatalog.ENDPOINTS) {
             try {
-                AuditIssue issue = probeEndpoint(service, endpoint, baseline, http);
+                AuditIssue issue = probeEndpoint(service, endpoint, baseline, http, sapHost);
                 if (issue != null) {
                     issues.add(issue);
                 }
@@ -40,8 +47,38 @@ public class SapHostChecks {
             }
         }
 
-        issues.addAll(activeChecks.run(service, http));
+        issues.addAll(activeChecks.run(service, http, sapHost));
         return issues;
+    }
+
+    // Lightweight SAP host fingerprint: look for SAP indicators on the root page
+    // and on the SAP-specific /sap/public/info service (whose body is checked so
+    // a catch-all 200 does not count).
+    private boolean looksLikeSapHost(HttpService service, Http http) {
+        try {
+            HttpRequestResponse root = http.sendRequest(HttpRequest.httpRequestFromUrl(buildUrl(service, "/")));
+            if (root != null && SapActiveChecks.hasSapIndicators(root.response())) {
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            HttpRequestResponse info = http.sendRequest(
+                    HttpRequest.httpRequestFromUrl(buildUrl(service, "/sap/public/info")));
+            if (info != null && info.response() != null) {
+                if (SapActiveChecks.hasSapIndicators(info.response())) {
+                    return true;
+                }
+                String body = info.response().bodyToString();
+                if (info.response().statusCode() == 200
+                        && (body.contains("RFC_SYSTEM_INFO") || body.contains("RFCSI_EXPORT")
+                                || (body.contains("SYSID") && body.contains("DBHOST")))) {
+                    return true;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
     }
 
     private Baseline computeBaseline(HttpService service, Http http) {
@@ -56,7 +93,8 @@ public class SapHostChecks {
         return new Baseline(-1, -1);
     }
 
-    private AuditIssue probeEndpoint(HttpService service, SapEndpoint endpoint, Baseline baseline, Http http) {
+    private AuditIssue probeEndpoint(HttpService service, SapEndpoint endpoint, Baseline baseline, Http http,
+                                     boolean sapHost) {
         HttpRequest req = HttpRequest.httpRequestFromUrl(buildUrl(service, endpoint.path));
         HttpRequestResponse rr = http.sendRequest(req);
         if (rr == null || rr.response() == null) {
@@ -73,6 +111,14 @@ public class SapHostChecks {
         if (baseline.status > 0
                 && statusCode == baseline.status
                 && Math.abs(length - baseline.length) < 32) {
+            return null;
+        }
+
+        // Only report when there is SAP corroboration: either the host already
+        // fingerprinted as SAP, or this specific response carries SAP markers.
+        // This prevents a reachable but generic path on a non-SAP application
+        // from raising an "SAP:" issue.
+        if (!sapHost && !SapActiveChecks.hasSapIndicators(rr.response())) {
             return null;
         }
 

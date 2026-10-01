@@ -15,7 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   extension.
 - Active CVE checks: Visual Composer Metadata Uploader (CVE-2025-31324), ICMAD
   version detection (CVE-2022-22536), RECON WSDL content verification
-  (CVE-2020-6287), and `/sap/public/info` unauthenticated system-info
+  (CVE-2020-6287), Solution Manager EEM missing authentication (CVE-2020-6207,
+  WSDL content-verified), and `/sap/public/info` unauthenticated system-info
   disclosure. The catalog additionally tags LMXML (CVE-2020-6308) and the
   EJB / JMX Invoker servlets (CVE-2010-5326).
 - `/sap/public/info` disclosure parses the `RFC_SYSTEM_INFO` response and
@@ -45,6 +46,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Active checks issue their requests through the scan-task `Http` object so Burp
   links, scopes and throttles them with the audit.
 - Reflected XSS probe uses a random marker instead of a static payload.
+- False-positive reduction: host and CVE active findings now require SAP
+  corroboration (SAP `Server` header, SAP-specific header, or SAP session cookie
+  on the base response, root page, or content-verified `/sap/public/info`, or
+  SAP markers on the endpoint response itself) before an `SAP:` issue is raised.
+  In particular the Visual Composer check no longer fires on a bare `HTTP 500`
+  from a non-SAP host; it grades confidence by evidence (`FIRM` on `200`/`405`
+  from an SAP host, `TENTATIVE` on an ambiguous `500`).
 - Build targets Java 17 with a `compileOnly` Montoya dependency.
 
 ### Removed

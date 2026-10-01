@@ -15,6 +15,7 @@ Active content-verifying probes:
 - **CVE-2025-31324** - NetWeaver Visual Composer Metadata Uploader (unauth RCE)
 - **CVE-2022-22536** - ICMAD (ICM / Web Dispatcher HTTP smuggling, version-based)
 - **CVE-2020-6287** - RECON (LM Configuration Wizard, CTCWebService)
+- **CVE-2020-6207** - Solution Manager EEM missing authentication (WSDL-verified)
 
 CVE-tagged catalog endpoints (reachability fingerprint, confirm the component
 version before acting):
@@ -73,6 +74,17 @@ WaSAP registers three scan checks with Burp Scanner:
 All findings are raised via `AuditIssue.auditIssue(...)` with severity,
 confidence, background, remediation background, and the request/response that
 produced them.
+
+**False-positive controls.** Host active findings require SAP corroboration
+before they are raised: either the host fingerprints as SAP (SAP product in the
+`Server` header, an SAP-specific response header, or an SAP session cookie - on
+the base response, the root page, or a content-verified `/sap/public/info`), or
+the specific endpoint response itself carries SAP markers. A reachable but
+generic path, or a bare `HTTP 500` on an unrelated application, does not raise an
+`SAP:` issue. CVE probes grade confidence by evidence strength (for example, the
+Visual Composer check reports `FIRM` on `200`/`405` from an SAP host and
+`TENTATIVE` on an ambiguous `500`), and the CTC, RECON/EEM WSDL, HYPARCHIV XSS
+and `/sap/public/info` checks verify response content rather than status alone.
 
 ---
 
