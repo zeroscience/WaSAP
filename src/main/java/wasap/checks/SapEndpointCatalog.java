@@ -164,6 +164,19 @@ public final class SapEndpointCatalog {
         e.add(gw("/sap/opu/odata/iwfnd/managingservice/", "Gateway OData Managing Service", MEDIUM,
                 "The Gateway OData managing service is reachable and can expose service registration and " +
                         "administration functions."));
+        e.add(gw("/sap/bc/ui2/start_up", "Fiori Launchpad start_up Service", MEDIUM,
+                "The Fiori Launchpad start_up service is reachable. It returns the current user context and " +
+                        "personalization and, when exposed anonymously, can disclose user and system details."));
+        e.add(gw("/sap/bc/ui2/flp", "Fiori Launchpad Shell (flp)", INFORMATION,
+                "The Fiori Launchpad shell endpoint is reachable, confirming an exposed Fiori front-end."));
+        e.add(gw("/sap/opu/odata/UI2/PAGE_BUILDER_PERS/", "Fiori Page Builder (Personalization)", LOW,
+                "The Fiori Page Builder personalization OData service is reachable and can expose launchpad layout " +
+                        "and personalization data."));
+        e.add(wd("/sap/bc/webdynpro/sap/apb_lpd_cust", "Launchpad Customizing (apb_lpd_cust)", MEDIUM,
+                "The Launchpad customizing Web Dynpro application is reachable. In some configurations it is " +
+                        "accessible anonymously and discloses launchpad and target-mapping configuration."));
+        e.add(icf("/sap/bc/srt/rfc/sap/", "SOAP RFC Runtime", LOW,
+                "The SOAP-to-RFC runtime namespace is reachable and can enumerate exposed RFC-enabled web services."));
 
         // ---------------------------------------------------------------
         // NetWeaver Java management interfaces
