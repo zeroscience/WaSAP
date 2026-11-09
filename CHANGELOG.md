@@ -4,6 +4,16 @@ All notable changes to WaSAP are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- The per-host active check now sends the endpoint catalog and CVE probes only
+  when the host fingerprints as SAP (base response, root page or
+  content-verified `/sap/public/info`). Non-SAP hosts receive at most two
+  requests from WaSAP's host check instead of the full catalog.
+- README states that WaSAP requires Burp Suite Professional (Burp Scanner) and
+  documents the per-host request volume.
+
 ## [2.5.1] - Montoya scanner
 
 ### Added

@@ -27,18 +27,22 @@ public class SapHostChecks {
         List<AuditIssue> issues = new ArrayList<>();
         HttpService service = base.httpService();
 
-        // Corroborate that this is actually an SAP host before raising endpoint
-        // findings. The passive side already saw the base response; combine that
-        // with a couple of targeted probes. On a non-SAP host this stays false
-        // and each endpoint must prove SAP on its own response, which suppresses
-        // false positives on unrelated applications.
+        // Corroborate that this is actually an SAP host before sending the
+        // endpoint catalog and CVE probes. The base response is checked first
+        // (no request), then at most two targeted probes (root page and
+        // /sap/public/info). A host that does not fingerprint as SAP gets no
+        // further traffic, which keeps the per-host cost on unrelated
+        // applications to two requests and avoids false positives.
         boolean sapHost = SapActiveChecks.hasSapIndicators(base.response()) || looksLikeSapHost(service, http);
+        if (!sapHost) {
+            return issues;
+        }
 
         Baseline baseline = computeBaseline(service, http);
 
         for (SapEndpoint endpoint : SapEndpointCatalog.ENDPOINTS) {
             try {
-                AuditIssue issue = probeEndpoint(service, endpoint, baseline, http, sapHost);
+                AuditIssue issue = probeEndpoint(service, endpoint, baseline, http);
                 if (issue != null) {
                     issues.add(issue);
                 }
@@ -47,7 +51,7 @@ public class SapHostChecks {
             }
         }
 
-        issues.addAll(activeChecks.run(service, http, sapHost));
+        issues.addAll(activeChecks.run(service, http, true));
         return issues;
     }
 
@@ -93,8 +97,7 @@ public class SapHostChecks {
         return new Baseline(-1, -1);
     }
 
-    private AuditIssue probeEndpoint(HttpService service, SapEndpoint endpoint, Baseline baseline, Http http,
-                                     boolean sapHost) {
+    private AuditIssue probeEndpoint(HttpService service, SapEndpoint endpoint, Baseline baseline, Http http) {
         HttpRequest req = HttpRequest.httpRequestFromUrl(buildUrl(service, endpoint.path));
         HttpRequestResponse rr = http.sendRequest(req);
         if (rr == null || rr.response() == null) {
@@ -111,14 +114,6 @@ public class SapHostChecks {
         if (baseline.status > 0
                 && statusCode == baseline.status
                 && Math.abs(length - baseline.length) < 32) {
-            return null;
-        }
-
-        // Only report when there is SAP corroboration: either the host already
-        // fingerprinted as SAP, or this specific response carries SAP markers.
-        // This prevents a reachable but generic path on a non-SAP application
-        // from raising an "SAP:" issue.
-        if (!sapHost && !SapActiveChecks.hasSapIndicators(rr.response())) {
             return null;
         }
 
