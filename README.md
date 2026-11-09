@@ -67,9 +67,10 @@ WaSAP registers three scan checks with Burp Scanner:
   `HttpOnly` / `Secure` flags, and ABAP/J2EE verbose error pages.
 - **`SapHostScanCheck`** (`ActiveScanCheck`, `PER_HOST`) - Burp runs it exactly
   once per host, regardless of how many insertion points the host exposes.
-  Enumerates the endpoint catalog and runs deeper CVE-specific probes. A random
-  baseline probe is issued first so that custom 404 / SPA catch-all responses
-  can be filtered out.
+  It first fingerprints the host as SAP; only if that succeeds does it
+  enumerate the endpoint catalog and run deeper CVE-specific probes. A random
+  baseline probe is issued before the catalog so that custom 404 / SPA
+  catch-all responses can be filtered out.
 - **`SapInsertionPointScanCheck`** (`ActiveScanCheck`, `PER_INSERTION_POINT`) -
   runs on every insertion point but only acts on SAP-specific parameter names.
   Active checks issue their requests through the scan-task `Http` object so Burp
@@ -79,11 +80,23 @@ All findings are raised via `AuditIssue.auditIssue(...)` with severity,
 confidence, background, remediation background, and the request/response that
 produced them.
 
-**False-positive controls.** Host active findings require SAP corroboration
-before they are raised: either the host fingerprints as SAP (SAP product in the
-`Server` header, an SAP-specific response header, or an SAP session cookie - on
-the base response, the root page, or a content-verified `/sap/public/info`), or
-the specific endpoint response itself carries SAP markers. A reachable but
+**Request volume.** The per-host check is the only part of WaSAP that sends a
+noticeable number of requests, and it runs once per host per scan:
+
+| Host                        | Requests from the per-host check                                        |
+|-----------------------------|-------------------------------------------------------------------------|
+| Base response shows SAP     | 0 fingerprint + 1 baseline + 58 catalog paths + ~7 CVE probes (~66 total) |
+| SAP found via `/` or `/sap/public/info` | 1-2 fingerprint + the same as above                         |
+| Not SAP                     | 2 (`/` and `/sap/public/info`), then stops                              |
+
+The per-insertion-point check sends requests only for SAP-specific parameter
+names, and the passive check sends none. Every request goes through the scan
+task's `Http` object, so Burp's resource pool throttling and scope apply.
+
+**False-positive controls.** Host active probes run only once the host
+fingerprints as SAP (SAP product in the `Server` header, an SAP-specific
+response header, or an SAP session cookie - on the base response, the root
+page, or a content-verified `/sap/public/info`). A reachable but
 generic path, or a bare `HTTP 500` on an unrelated application, does not raise an
 `SAP:` issue. CVE probes grade confidence by evidence strength (for example, the
 Visual Composer check reports `FIRM` on `200`/`405` from an SAP host and
@@ -93,6 +106,10 @@ and `/sap/public/info` checks verify response content rather than status alone.
 ---
 
 ## Installation
+
+**Requirements:** Burp Suite **Professional**. WaSAP is built entirely from
+Burp Scanner scan checks (passive and active), and Burp Scanner is not available
+in Community Edition, so the extension has no effect there.
 
 1. Download `WaSAP.jar` from the [releases page](https://github.com/zeroscience/WaSAP/releases)
    or build it from source (see below).
